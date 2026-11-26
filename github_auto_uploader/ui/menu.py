@@ -167,9 +167,19 @@ def select_main_action():
     return answers["action"] if answers else MenuAction.EXIT
 
 
-def select_repository(repositories, *, message="Select repository", allow_create=False):
-    """Select a repository with immediate case-insensitive type-to-filter."""
-    all_repositories = sorted(set(repositories), key=str.casefold)
+def select_repository(repositories, *, message="Select repository", allow_create=False, pinned=None):
+    """Select a repository with immediate case-insensitive type-to-filter.
+
+    Repositories listed in ``pinned`` (e.g. recently used ones) are shown first,
+    in the given order, followed by the rest sorted alphabetically.
+    """
+    available = {name.casefold(): name for name in repositories}
+    top = []
+    for name in pinned or []:
+        match = available.pop(name.casefold(), None) if name else None
+        if match:
+            top.append(match)
+    all_repositories = top + sorted(available.values(), key=str.casefold)
     question = inquirer.List(
         "repository",
         message=message,

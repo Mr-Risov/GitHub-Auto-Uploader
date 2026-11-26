@@ -160,6 +160,35 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
 
+MAX_RECENT_REPOS = 10
+
+def get_recent_repos(config, username):
+    """Return recently used repository names for an account, newest first."""
+    return list(config.get("recent_repos", {}).get(username, []))
+
+def remember_recent_repo(config, username, repo_name):
+    """Move repo_name to the top of the account's recent repository list."""
+    recent = config.setdefault("recent_repos", {})
+    names = [n for n in recent.get(username, []) if n.casefold() != repo_name.casefold()]
+    recent[username] = [repo_name] + names[:MAX_RECENT_REPOS - 1]
+    save_config(config)
+
+def get_folder_remote_repo(folder, username):
+    """Return the repo name of the folder's origin remote if it belongs to username."""
+    try:
+        result = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=folder, capture_output=True, text=True,
+        )
+    except Exception:
+        return None
+    if result.returncode != 0:
+        return None
+    match = re.search(r"github\.com[:/]([^/]+)/([^/\s]+?)(?:\.git)?/?$", result.stdout.strip())
+    if match and match.group(1).casefold() == username.casefold():
+        return match.group(2)
+    return None
+
 def fetch_github_username(token):
     try:
         headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github.v3+json'}
@@ -1149,10 +1178,13 @@ def main():
                 with console.status("[blue]Fetching your repositories...[/blue]"):
                     existing_repos = [repo.name for repo in user.get_repos()]
 
+                pinned_repos = [get_folder_remote_repo(target_folder, username)]
+                pinned_repos += get_recent_repos(config, username)
                 repo_selection = select_repository(
                     existing_repos,
                     message=f"Select repository for '{suggested_repo_name}'",
                     allow_create=True,
+                    pinned=pinned_repos,
                 )
                 if repo_selection is None:
                     # Backed out of repo selection, loops back to folder prompt
@@ -1203,6 +1235,7 @@ def main():
                         clean_repo_url,
                         commit_msg,
                     ):
+                        remember_recent_repo(config, username, repo_name)
                         if release_plan:
                             publish_repository_release(repo, release_plan)
                         print_success(f"Upload Complete: https://github.com/{username}/{repo_name}")
