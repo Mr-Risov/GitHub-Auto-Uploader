@@ -28,14 +28,19 @@ class RepositoryAction(str, Enum):
     NO_MATCH = "__no_matching_repository__"
 
 
+NAVIGATION_KEYS = {"u": key.UP, "d": key.DOWN}
+
+
 class ShortcutListRenderer(InquirerListRenderer):
-    """Add single-key shortcuts without changing arrow/Enter behavior."""
+    """Add single-key shortcuts (U up, D down) without changing arrow/Enter behavior."""
 
     def process_input(self, pressed):
         shortcut = pressed.lower() if isinstance(pressed, str) else pressed
         shortcuts = getattr(self.question, "shortcuts", {})
         if shortcut in shortcuts:
             raise errors.EndOfInput(shortcuts[shortcut])
+        if shortcut in NAVIGATION_KEYS:
+            pressed = NAVIGATION_KEYS[shortcut]
         return super().process_input(pressed)
 
 
@@ -128,6 +133,12 @@ class RepositoryConsoleRender(ConsoleRender):
         return super().render_factory(question_type)
 
 
+def prompt(questions, **kwargs):
+    """inquirer.prompt with U/D navigation enabled for list questions."""
+    kwargs.setdefault("render", ShortcutConsoleRender())
+    return inquirer.prompt(questions, **kwargs)
+
+
 def _cyber_theme():
     terminal = Terminal()
     theme = themes.Default()
@@ -143,7 +154,7 @@ def select_main_action():
     """Select a main action using arrows/Enter, Q to quit, or R to refresh."""
     question = inquirer.List(
         "action",
-        message="Choose an action  [Q quit • R refresh]",
+        message="Choose an action  [U/D move • Q quit • R refresh]",
         choices=[
             ("Upload Folder to GitHub", MenuAction.UPLOAD),
             ("Download Repository from GitHub", MenuAction.DOWNLOAD),

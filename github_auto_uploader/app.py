@@ -38,6 +38,7 @@ from .ui.menu import (
     MenuAction,
     RepositoryAction,
     select_main_action,
+    prompt,
     select_repository,
 )
 from .ui.renderer import BoxRow, console, render_box
@@ -319,7 +320,7 @@ def switch_github_account(config):
             carousel=True
         )
     ]
-    account_ans = inquirer.prompt(account_q)
+    account_ans = prompt(account_q)
     if not account_ans or "Back" in account_ans['account']:
         return get_active_account(config)
 
@@ -422,7 +423,7 @@ def confirm_secret_history_reset(folder, affected_paths, findings=None):
         "Cancel — keep current Git history",
         "Rebuild clean Git history — keep all local files",
     ]
-    answer = inquirer.prompt([
+    answer = prompt([
         inquirer.List(
             "recovery",
             message="Resolve secrets stored in old Git commits",
@@ -486,7 +487,7 @@ def handle_gitignore(folder):
                           choices=['Yes', 'No'],
                           default='Yes'),
         ]
-        answer = inquirer.prompt(questions)
+        answer = prompt(questions)
         if answer and answer['choice'] == "Yes":
             existing_content = ""
             if os.path.exists(gitignore_path):
@@ -513,7 +514,7 @@ def handle_gitignore(folder):
                           choices=['Yes', 'No'],
                           default='Yes'),
         ]
-        answer = inquirer.prompt(questions)
+        answer = prompt(questions)
         if answer and answer['choice'] == "Yes":
             gitignore_path = os.path.join(folder, ".gitignore")
             existing_content = ""
@@ -633,7 +634,7 @@ def setup_git_and_push(
                                   choices=['🔄 Attempt Fresh Push (Clean history)', '❌ Cancel'],
                                   default='🔄 Attempt Fresh Push (Clean history)')
                 ]
-                ans = inquirer.prompt(questions)
+                ans = prompt(questions)
                 if ans and "Fresh Push" in ans['choice']:
                     console.print("[blue]🧹 Cleaning up history...[/blue]")
                     git_dir = os.path.join(folder, ".git")
@@ -675,7 +676,7 @@ def delete_repository(g):
                           choices=['No', 'Yes'],
                           default='No')
         ]
-        conf = inquirer.prompt(confirm_q)
+        conf = prompt(confirm_q)
         if conf and conf['confirm'] == 'Yes':
             repo = user.get_repo(repo_name)
             repo.delete()
@@ -724,7 +725,7 @@ def download_repository(g, username, token):
                     default='Yes'
                 )
             ]
-            create_ans = inquirer.prompt(create_q)
+            create_ans = prompt(create_q)
             if not create_ans or create_ans['create'] != 'Yes':
                 console.print("[blue]Operation cancelled.[/blue]")
                 return
@@ -745,7 +746,7 @@ def download_repository(g, username, token):
                         default='Yes'
                     )
                 ]
-                update_ans = inquirer.prompt(update_q)
+                update_ans = prompt(update_q)
                 if update_ans and update_ans['update'] == 'Yes':
                     with console.status("[blue]Pulling latest changes...[/blue]"):
                         pull = run_command(["git", "pull", "--ff-only"], cwd=target_path)
@@ -1053,7 +1054,7 @@ def offer_upstream_update(update_status):
             default="No",
         )
     ]
-    answer = inquirer.prompt(update_q)
+    answer = prompt(update_q)
     if not answer or answer["update"] != "Yes":
         return False
 
@@ -1088,7 +1089,7 @@ def main():
             "MAIN MENU",
             [
                 Text(
-                    "↑/↓ navigate • Enter select • Q quit • R refresh",
+                    "↑/↓ or U/D navigate • Enter select • Q quit • R refresh",
                     style="muted",
                     justify="center",
                 )
@@ -1147,7 +1148,7 @@ def main():
                         carousel=True,
                     )
                 ]
-                folder_ans = inquirer.prompt(folder_confirm_q)
+                folder_ans = prompt(folder_confirm_q)
                 if not folder_ans or folder_ans['folder_choice'] == 'back':
                     break
 
@@ -1198,7 +1199,7 @@ def main():
 
                 # Step 3: Visibility and commit message
                 vis_q = [inquirer.List('visibility', message="Visibility", choices=['Public', 'Private'], default='Public')]
-                vis_ans = inquirer.prompt(vis_q)
+                vis_ans = prompt(vis_q)
                 if not vis_ans:
                     continue
                 is_public = vis_ans['visibility'] == "Public"
@@ -1220,7 +1221,7 @@ def main():
                             choices=['Yes', 'No'],
                             default='No',
                         )]
-                        release_ans = inquirer.prompt(release_q)
+                        release_ans = prompt(release_q)
                         if release_ans and release_ans['release'] == 'Yes':
                             release_plan = prepare_repository_release(repo, target_folder)
                     except UnknownObjectException:
